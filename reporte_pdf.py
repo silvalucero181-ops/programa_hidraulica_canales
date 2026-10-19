@@ -66,7 +66,10 @@ def dibujo(c, w=440, h=230):
 def pasos(c):
     f = lambda v, d=3: f"{v:.{d}f}"
     out = []
-    if c["diseno"]:
+    if c["diseno"] and c["diseno"].get("circ"):
+        d = c["diseno"]
+        out.append(("Dimensionamiento de la sección", ["Máxima eficiencia hidráulica: semicírculo, y = D/2", "A = πD²/8   P = πD/2   R = D/4", "Se halla D tal que Q(D, y = D/2) = Q (bisección)"], f"D = {f(d['D'])} m  |  y = {f(d['y'])} m"))
+    elif c["diseno"]:
         d = c["diseno"]
         out.append(("Dimensionamiento de la sección", [f"Criterio: {d['crit']}", f"b/y = {d['f']}·(√(1+z²) − z) = {f(d['m'])}",
                     "y = [Q·n/√S · (m + 2√(1+z²))^(2/3) / (m + z)^(5/3)]^(3/8)"], f"y = {f(d['y'])} m  |  b = {f(d['b'])} m"))
@@ -110,7 +113,7 @@ def pasos(c):
     out.append(("Verificación de velocidad", [f"{c['vmin']:.2f} ≤ V = {f(c['V'])} ≤ {c['vmax']:.2f} m/s"], c["msg_v"]))
     if c.get("altura") is not None:
         bld = c["altura"] - c["y"]
-        out.append(("Borde libre", [f"Método: {c['metodo_bl']}", c["bl_formula"], f"Criterio: {c['crit']}", f"BL disponible = altura − y = {f(c['altura'])} − {f(c['y'])} = {f(bld)} m"],
+        out.append(("Borde libre", [f"Método: {c['metodo_bl']}", c["bl_formula"], f"Criterio: {c['crit']}", f"BL disponible = altura − y = {f(c['altura'])} − {f(c['y'])} = {f(bld)} m", f"Altura mínima necesaria = y + BL = {f(c['y'] + c['BL'])} m"],
                     f"BL requerido = {f(c['BL'])} m  |  BL disponible = {f(bld)} m  |  " + ("Cumple" if bld >= c["BL"] - 1e-9 else "No cumple")))
     else:
         out.append(("Borde libre", [f"Método: {c['metodo_bl']}", c["bl_formula"], f"Criterio: {c['crit']}"], f"BL = {f(c['BL'])} m  |  H = y + BL = {f(c['H'])} m"))
@@ -164,6 +167,8 @@ def generar(c):
         cv.drawString(2 * cm, 1 * cm, limpiar("LYCANAL PRO  |  Desarrollado por Lucero Yamile Silva de la Cruz")); cv.drawRightString(19 * cm, 1 * cm, f"Página {d.page}"); cv.restoreState()
     doc.build(S, onFirstPage=pie, onLaterPages=pie)
     return buf.getvalue()
+
+
 
     
     
