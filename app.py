@@ -342,6 +342,16 @@ def dibujar_cerrada(s, y, H, mats):
     return fig
 
 
+def vista_previa(pts):
+    """Dibuja los puntos ingresados aunque la sección aún no se pueda calcular."""
+    fig = go.Figure(go.Scatter(x=[p[0] for p in pts], y=[p[1] for p in pts], mode="lines+markers+text", text=[str(i + 1) for i in range(len(pts))],
+                               textposition="top center", line=dict(color=MAR, width=3), marker=dict(size=9, color=ORO)))
+    fig.update_layout(title="Vista previa de los puntos ingresados", height=420, plot_bgcolor="#faf8f3", paper_bgcolor="rgba(0,0,0,0)", showlegend=False,
+                      dragmode="pan", margin=dict(l=40, r=40, t=60, b=50), font=dict(color=MAR),
+                      xaxis=dict(title="Distancia horizontal (m)", gridcolor="#e8e5dc"), yaxis=dict(title="Elevación (m)", gridcolor="#e8e5dc", scaleanchor="x"))
+    return fig
+
+
 def dib(s, y, H, mats, ns):
     if isinstance(s, (mh.Circular, mh.Parabolica)): return dibujar_cerrada(s, y, H, mats)
     return dibujar_poli(s, y, H) if isinstance(s, mh.Poligonal) else dibujar(s, y, H, mats, ns)
@@ -398,7 +408,10 @@ def tabla_seccion(tipo):
     b2.button("↺ Restablecer ejemplo", key=clave + "_reset", on_click=_restablecer, args=(clave,), width="stretch")
     errs = []
     if xy:
-        pts = [(r["a"], r["b"]) for r in filas]; ms = [r["mat"] for r in filas[:-1]]; ns_ = [r["n"] for r in filas[:-1]]
+        orden = sorted(filas, key=lambda r: r["a"])          # estable: conserva el orden de los puntos con la misma X
+        if [r["id"] for r in orden] != [r["id"] for r in filas]:
+            st.caption("Los puntos se ordenaron automáticamente de izquierda a derecha (por X) para el cálculo.")
+        pts = [(r["a"], r["b"]) for r in orden]; ms = [r["mat"] for r in orden[:-1]]; ns_ = [r["n"] for r in orden[:-1]]
     else:
         x = yy = 0.0; pts = [(0.0, 0.0)]
         for r in filas:
@@ -475,13 +488,13 @@ with izq:
         tipo = "Sección compuesta"
         modo_ing = st.radio("Cómo ingresar la sección", ["Por tramos (rectas, arcos y parábolas)", "Por coordenadas (X, Y)"])
     else:
-        tipo = st.selectbox("Tipo", ["Rectangular", "Trapezoidal", "Triangular"] if modulo == "diseno" else
+        tipo = st.selectbox("Tipo", ["Rectangular", "Trapezoidal", "Triangular", "Circular"] if modulo == "diseno" else
                             ["Rectangular", "Trapezoidal", "Triangular", "Circular", "Parabólica", "Por coordenadas (X, Y)", "Por ángulos y tramos"])
     POLI = tipo in ("Por coordenadas (X, Y)", "Por ángulos y tramos", "Sección compuesta")
     FORMA = tipo in ("Circular", "Parabólica")
     b = st.number_input("Ancho de solera b (m)", 0.0, value=0.8, step=0.1, format="%.3f") if (tipo != "Triangular" and modulo != "diseno" and not POLI and not FORMA) else 0.0
     z = st.number_input("Talud z (H:V)", 0.0, value=1.0, step=0.25, format="%.3f") if (tipo != "Rectangular" and not POLI and not FORMA) else 0.0
-    if tipo == "Circular":
+    if tipo == "Circular" and modulo != "diseno":
         Dc = st.number_input("Diámetro D (m)", 0.0, value=1.0, step=0.1, format="%.3f")
     if tipo == "Parabólica":
         Tpar = st.number_input("Espejo de agua T (m), a la altura H", 0.0, value=1.0, step=0.1, format="%.3f")
@@ -519,6 +532,7 @@ with izq:
     crit_d = None
     if modulo == "diseno":
         if tipo == "Triangular": st.caption("En sección triangular la máxima eficiencia se logra con z = 1 (θ = 45°); no hay ancho de solera que dimensionar.")
+        elif tipo == "Circular": st.caption("En la sección circular la máxima eficiencia hidráulica es el semicírculo (y = D/2). La mínima infiltración y la intermedia solo se definen para secciones rectangulares y trapezoidales.")
         else: crit_d = st.selectbox("Criterio de diseño", list(mh.FACTORES))
 
     st.markdown("### Rugosidad")
@@ -642,13 +656,24 @@ tab_en = _tabs[2] if en_on else None
 if errs:
     with tab_sec:
         for e in errs: st.error(e)
+        if POLI and pts_ and len(pts_) >= 2:
+            st.plotly_chart(vista_previa(pts_), theme=None, config=CONFIG)
         yp = y if y else 0.5
         if s.b > 0 or s.z > 0:
             st.plotly_chart(dib(s, yp, yp * 1.3, mats, ns), theme=None, config=CONFIG)
     st.stop()
 
 it = None
-if modulo == "diseno" and tipo != "Triangular":
+if modulo == "diseno" and tipo == "Circular":
+    def _q_dis(D):
+        global s
+        s = mh.Circular(D)
+        return mh.q_flujo(s, nfun, S, D / 2, metodo_sol, p_met) - Q
+    hi_ = 1.0
+    while _q_dis(hi_) < 0 and hi_ < 1e4: hi_ *= 2
+    Dc, _ = mh.biseccion(_q_dis, 1e-6, hi_)
+    s = mh.Circular(Dc)
+if modulo == "diseno" and tipo not in ("Triangular", "Circular"):
     m_d = mh.FACTORES[crit_d] * (math.sqrt(1 + z * z) - z)
 
     def _q_dis(yy):
@@ -714,7 +739,7 @@ def tarjetas(items):
 with tab_res:
     pdf_slot = st.container()
     st.markdown('<div class="grupo" style="margin-top:6px">Resultado principal</div>', unsafe_allow_html=True)
-    tarjetas([("Tirante crítico yc" if inc == "Tirante crítico (yc)" else "Tirante normal y", f"{y:.3f} m"), ("Caudal Q", f"{Q:.3f} m³/s"), ("Pendiente crítica Sc" if inc == "Tirante crítico (yc)" else "Pendiente S", f"{S:.3f} m/m")] + ([("Ancho de solera b", f"{s.b:.3f} m")] if (modulo == "diseno" and tipo != "Triangular") else []))
+    tarjetas([("Tirante crítico yc" if inc == "Tirante crítico (yc)" else "Tirante normal y", f"{y:.3f} m"), ("Caudal Q", f"{Q:.3f} m³/s"), ("Pendiente crítica Sc" if inc == "Tirante crítico (yc)" else "Pendiente S", f"{S:.3f} m/m")] + ([("Ancho de solera b", f"{s.b:.3f} m")] if (modulo == "diseno" and tipo not in ("Triangular", "Circular")) else [("Diámetro D", f"{s.D:.3f} m")] if (modulo == "diseno" and tipo == "Circular") else []))
     st.markdown('<div class="grupo">Geometría del flujo</div>', unsafe_allow_html=True)
     tarjetas([("Área A", f"{A:.3f} m²"), ("Perímetro mojado P", f"{P:.3f} m"), ("Espejo de agua T", f"{T:.3f} m"),
               ("Radio hidráulico R", f"{R:.3f} m"), ("Profundidad hidráulica A/T", f"{A / T:.3f} m")])
@@ -733,11 +758,14 @@ with tab_res:
         tarjetas([("Energía específica E", f"{E:.3f} m"), ("Energía mínima Emín", f"{Ec:.3f} m"), ("Tirante alterno y₂", y2t)])
     st.markdown('<div class="grupo">Borde libre</div>', unsafe_allow_html=True)
     if FIJA:
-        tarjetas([("BL requerido (método elegido)", f"{BL:.3f} m"), ("BL disponible = altura − y", f"{BLd:.3f} m"), ("Altura de la sección", f"{s.altura:.3f} m")])
+        tarjetas([("BL requerido (método elegido)", f"{BL:.3f} m"), ("BL disponible = altura − y", f"{BLd:.3f} m"), ("Altura de la sección", f"{s.altura:.3f} m"), ("Altura mínima necesaria = y + BL", f"{y + BL:.3f} m")])
         if isinstance(s, mh.Circular): st.caption(f"Relación y/D = {y / s.D:.3f}")
         (st.success if BLd >= BL - 1e-9 else st.warning)(
             f"Cumple: el borde libre disponible ({BLd:.3f} m) es mayor o igual al requerido ({BL:.3f} m)." if BLd >= BL - 1e-9 else
             f"No cumple: el borde libre disponible ({BLd:.3f} m) es menor que el requerido ({BL:.3f} m). Conviene aumentar la altura de la sección o reducir el tirante.")
+        if not isinstance(s, mh.Circular) and BLd > 1.25 * BL:
+            st.info(f"Hay altura de más: la sección es {s.altura - (y + BL):.3f} m más alta de lo necesario. La altura mínima es y + BL = {y + BL:.3f} m (línea dorada del dibujo); "
+                    "podrías recortar la sección hasta ahí y ahorrar material.")
     else:
         tarjetas([("Borde libre BL", f"{BL:.3f} m"), ("Altura total H = y + BL", f"{y + BL:.3f} m"), ("BL como % de y", f"{100 * BL / y:.1f} %")])
     st.caption("Criterio aplicado: " + crit)
@@ -774,7 +802,13 @@ def _res(txt, tono=""):
 with tab_proc:
     st.markdown('<div class="grupo" style="margin-top:6px">Memoria de cálculo</div>', unsafe_allow_html=True)
 
-    if modulo == "diseno" and tipo != "Triangular":
+    if modulo == "diseno" and tipo == "Circular":
+        with st.container(border=True):
+            _paso("D", "Dimensionamiento de la sección")
+            st.latex(r"y=\frac{D}{2}\qquad A=\frac{\pi D^2}{8}\qquad P=\frac{\pi D}{2}\qquad R=\frac{D}{4}")
+            st.caption("La sección circular de máxima eficiencia hidráulica es el semicírculo. Se busca el diámetro D para el que Q(D, y = D/2) iguale al caudal de diseño, por bisección.")
+            _res(f"D = {s.D:.3f} m | y = {y:.3f} m (semicírculo)")
+    if modulo == "diseno" and tipo not in ("Triangular", "Circular"):
         with st.container(border=True):
             _paso("D", "Dimensionamiento de la sección")
             st.latex(r"\frac{b}{y}=f\,(\sqrt{1+z^2}-z)\qquad f=2\ (\mathrm{MEH}),\ 4\ (\mathrm{MI}),\ 3\ (\text{intermedia})")
@@ -916,22 +950,22 @@ if modo:
     else: det = [(a_, p_, n_) for a_, (p_, n_) in zip((["Fondo"] if s.b > 0 else []) + (["Paredes"] if modo == 1 else ["Pared izquierda", "Pared derecha"]), partes(y))]
 else: det = []
 H = y + BL
-grupos = [("Resultado principal", [("Tirante crítico yc" if inc == "Tirante crítico (yc)" else "Tirante normal y", f"{y:.3f} m"), ("Caudal Q", f"{Q:.3f} m³/s"), ("Pendiente crítica Sc" if inc == "Tirante crítico (yc)" else "Pendiente S", f"{S:.3f} m/m")] + ([("Ancho de solera b", f"{s.b:.3f} m")] if (modulo == "diseno" and tipo != "Triangular") else [])),
+grupos = [("Resultado principal", [("Tirante crítico yc" if inc == "Tirante crítico (yc)" else "Tirante normal y", f"{y:.3f} m"), ("Caudal Q", f"{Q:.3f} m³/s"), ("Pendiente crítica Sc" if inc == "Tirante crítico (yc)" else "Pendiente S", f"{S:.3f} m/m")] + ([("Ancho de solera b", f"{s.b:.3f} m")] if (modulo == "diseno" and tipo not in ("Triangular", "Circular")) else [("Diámetro D", f"{s.D:.3f} m")] if (modulo == "diseno" and tipo == "Circular") else [])),
           ("Geometría del flujo", [("Área A", f"{A:.3f} m²"), ("Perímetro mojado P", f"{P:.3f} m"), ("Espejo de agua T", f"{T:.3f} m"), ("Radio hidráulico R", f"{R:.3f} m"), ("Profundidad hidráulica A/T", f"{A / T:.3f} m")]),
           ("Rugosidad", [("n usada", f"{n:.3f}"), ("Origen", ORIGEN)]),
           ("Velocidad y régimen", [("Velocidad V", f"{V:.3f} m/s"), ("Número de Froude F", f"{F:.3f}"), ("Régimen", reg), ("Tirante crítico yc", f"{yc:.3f} m")]),
           *([("Energía específica", [("Energía específica E", f"{E:.3f} m"), ("Energía mínima Emín", f"{Ec:.3f} m"), ("Tirante alterno y₂", y2t)])] if en_on else []),
-          ("Borde libre", [("BL requerido", f"{BL:.3f} m"), ("BL disponible = altura − y", f"{BLd:.3f} m"), ("Altura de la sección", f"{s.altura:.3f} m")] if FIJA else [("Borde libre BL", f"{BL:.3f} m"), ("Altura total H = y + BL", f"{H:.3f} m"), ("BL como % de y", f"{100 * BL / y:.1f} %")])]
+          ("Borde libre", [("BL requerido", f"{BL:.3f} m"), ("BL disponible = altura − y", f"{BLd:.3f} m"), ("Altura de la sección", f"{s.altura:.3f} m"), ("Altura mínima necesaria (y + BL)", f"{y + BL:.3f} m")] if FIJA else [("Borde libre BL", f"{BL:.3f} m"), ("Altura total H = y + BL", f"{H:.3f} m"), ("BL como % de y", f"{100 * BL / y:.1f} %")])]
 ctx = dict(titulo=TITULOS[modulo], tipo=tipo, dims=(f", b = {s.b:.3f} m" if s.b > 0 else "") + (f", z = {s.z:.3f}" if s.z > 0 else "") + (f", D = {Dc:.3f} m" if tipo == "Circular" else "") + (f", T = {Tpar:.3f} m, H = {Hpar:.3f} m" if tipo == "Parabólica" else ""), Q=Q, S=S, inc=inc.split(" (")[0].lower(),
            horton=det, n_base=n_base(y), cowan=(n_base(y), k1, k2, k3, k4, k5) if cow_on else None, material=mats[0] if mats else "", n=n,
            origen=ORIGEN, metodo=metodo_sol, C=Cc_, iter=len(it) if it else 0,
            y=y, A=A, P=P, T=T, R=R, V=V, F=F, reg=reg, msg_reg=msg_reg, E=E, Ec=Ec, y2=y2, y2t=y2t, yc=yc, vmin=vmin, vmax=vmax, msg_v=msg_v, bl_formula=f_bl, crit=crit, BL=BL, H=H,
            altura=(s.altura if FIJA else None), aviso=mh.validar_pendiente(S), sub=(mh.detalle_subareas(s, y, S, metodo_sol, p_met) if SUBAREAS else None), proyecto=proyecto, energia=en_on, metodo_bl=metodo, comp_bl=comp, grupos=grupos, dibujo=datos_dibujo(s, y, H),
-           diseno=dict(crit=crit_d, f=mh.FACTORES[crit_d], m=m_d, y=y_d, b=s.b) if (modulo == "diseno" and tipo != "Triangular") else None)
+           diseno=(dict(circ=True, D=s.D, y=y) if (modulo == "diseno" and tipo == "Circular") else dict(crit=crit_d, f=mh.FACTORES[crit_d], m=m_d, y=y_d, b=s.b) if (modulo == "diseno" and tipo != "Triangular") else None))
 with pdf_slot:
     st.download_button("📄 Descargar reporte en PDF", data=reporte_pdf.generar(ctx), file_name="reporte_lycanal_pro.pdf", mime="application/pdf")
 
-    
+
 
 
 
