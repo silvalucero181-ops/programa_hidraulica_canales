@@ -69,11 +69,18 @@ def tabla_cowan():
 CONFIG = {"scrollZoom": True, "displaylogo": False, "modeBarButtonsToRemove": ["zoom2d", "select2d", "lasso2d"]}
 
 
+
 def formato_pendiente(S):
-    """Muestra pendientes pequeñas en por mil para evitar que parezcan cero."""
-    if abs(S) < 0.01:
-        return f"{S:.6f} m/m | {1000*S:.4f} ‰"
-    return formato_pendiente(S)
+    """Formatea la pendiente en m/m y en % o ‰ según su magnitud."""
+    try:
+        S = float(S)
+    except (TypeError, ValueError):
+        return "—"
+
+    if abs(S) < 0.001:
+        return f"{S:.4f} m/m ({S * 1000:.4f} ‰)"
+    else:
+        return f"{S:.4f} m/m ({S * 100:.4f} %)"
 
 
 def dibujar(s, y, H, mats, ns=None):
