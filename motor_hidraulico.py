@@ -321,23 +321,23 @@ def borde_libre(metodo, y, Q, revestido=False, manual=0.3, b=0.0):
         C = c_usbr(Q)
         crit = f"C = {C} porque Q {'≤ 0.6' if Q <= 0.6 else '≤ 85'} m³/s"
         if Q > 85: crit += " (Q mayor a 85 m³/s: fuera del rango del método)"
-        return math.sqrt(C * y), f"BL = √(C·y) = √({C}·{y:.3f})", crit
+        return math.sqrt(C * y), f"BL = √(C·y) = √({C}·{y:.4f})", crit
     if metodo.startswith("Máximo"):
         d = 5 if revestido else 3
-        return y / d, f"BL = y/{d} = {y:.3f}/{d}", f"Canal {'revestido' if revestido else 'sin revestir'} según los materiales elegidos: y/{d}"
+        return y / d, f"BL = y/{d} = {y:.4f}/{d}", f"Canal {'revestido' if revestido else 'sin revestir'} según los materiales elegidos: y/{d}"
     if metodo == "Villón por caudal":
         v = 0.30 if Q <= 0.5 else 0.40
-        return v, f"BL = {v:.2f} m", f"Q = {Q:.3f} m³/s {'≤' if Q <= 0.5 else '>'} 0.5 m³/s"
+        return v, f"BL = {v:.2f} m", f"Q = {Q:.4f} m³/s {'≤' if Q <= 0.5 else '>'} 0.5 m³/s"
     if metodo == "Villón por ancho de solera":
         if b <= 0: return None, "No aplica", "Requiere un ancho de solera (rectangular o trapezoidal)"
         for lim, v in TABLA_ANCHO:
-            if b <= lim: return v, f"BL = {v:.2f} m", f"b = {b:.3f} m, dentro de la fila hasta {lim} m"
-        return 1.00, "BL = 1.00 m", f"b = {b:.3f} m supera los 20 m (fuera de la tabla): se usa el último valor"
+            if b <= lim: return v, f"BL = {v:.2f} m", f"b = {b:.4f} m, dentro de la fila hasta {lim} m"
+        return 1.00, "BL = 1.00 m", f"b = {b:.4f} m supera los 20 m (fuera de la tabla): se usa el último valor"
     if metodo.startswith("ANA"):
         for lim, rv, sr in TABLA_ANA:
             if Q <= lim:
                 v = rv if revestido else sr
-                return v, f"BL = {v:.3f} m", f"Q = {Q:.3f} m³/s, canal {'revestido' if revestido else 'sin revestir'}"
+                return v, f"BL = {v:.4f} m", f"Q = {Q:.4f} m³/s, canal {'revestido' if revestido else 'sin revestir'}"
     return manual, "BL ingresado por el usuario", "Valor ingresado por el usuario"
 
 
