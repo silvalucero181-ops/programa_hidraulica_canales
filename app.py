@@ -69,6 +69,13 @@ def tabla_cowan():
 CONFIG = {"scrollZoom": True, "displaylogo": False, "modeBarButtonsToRemove": ["zoom2d", "select2d", "lasso2d"]}
 
 
+def formato_pendiente(S):
+    """Muestra pendientes pequeñas en por mil para evitar que parezcan cero."""
+    if abs(S) < 0.01:
+        return f"{S:.6f} m/m | {1000*S:.4f} ‰"
+    return formato_pendiente(S)
+
+
 def dibujar(s, y, H, mats, ns=None):
     """Sección con revestimiento por material (color y trama), agua y borde libre."""
     hb, k, z = s.b / 2, s.k, s.z
@@ -91,13 +98,13 @@ def dibujar(s, y, H, mats, ns=None):
     fig.add_trace(go.Scatter(x=[-xlo, xlo], y=[H, H], mode="lines", line=dict(color=ORO, width=2, dash="dash"), hoverinfo="skip"))
     def nota(x, yy, t, size=12, **kw): fig.add_annotation(x=x, y=yy, text=t, showarrow=False, font=dict(color=MAR, size=size), **kw)
     if s.b > 0:
-        nota(0, -e, f"b = {s.b:.3f} m" + (f"<br>{mats[0]}, n = {ns[0]:.3f}" if ns else ""), yshift=-22)
-    nota(0, y / 2, f"y = {y:.3f} m", size=14)
-    nota(0, y, f"T = {s.T(y):.3f} m", yshift=12)
-    nota(xlo, H, f"H = {H:.3f} m", xanchor="left", xshift=6)
+        nota(0, -e, f"b = {s.b:.4f} m" + (f"<br>{mats[0]}, n = {ns[0]:.4f}" if ns else ""), yshift=-22)
+    nota(0, y / 2, f"y = {y:.4f} m", size=14)
+    nota(0, y, f"T = {s.T(y):.4f} m", yshift=12)
+    nota(xlo, H, f"H = {H:.4f} m", xanchor="left", xshift=6)
     if ns:
-        nota(-(hb + e * k + z * H / 2), H / 2, f"{mats[1]}<br>n = {ns[1]:.3f}", xanchor="right", xshift=-8)
-        nota((hb + e * k + z * H / 2), H / 2, f"{mats[2]}<br>n = {ns[2]:.3f}", xanchor="left", xshift=8)
+        nota(-(hb + e * k + z * H / 2), H / 2, f"{mats[1]}<br>n = {ns[1]:.4f}", xanchor="right", xshift=-8)
+        nota((hb + e * k + z * H / 2), H / 2, f"{mats[2]}<br>n = {ns[2]:.4f}", xanchor="left", xshift=8)
     fig.update_layout(title="Visualización dinámica de la sección", height=500, plot_bgcolor="#faf8f3", paper_bgcolor="rgba(0,0,0,0)",
                       showlegend=False, dragmode="pan", margin=dict(l=40, r=40, t=60, b=50), font=dict(color=MAR),
                       xaxis=dict(title="Distancia horizontal / Ancho (m)", gridcolor="#e8e5dc", zerolinecolor="#c9ced6"),
@@ -157,7 +164,7 @@ def dibujar_poli(s, y, H, ns=None):
         xs, zs = [s.pts[k][0] for k in range(i0, i1 + 2)], [s.pts[k][1] for k in range(i0, i1 + 2)]
         fig.add_trace(go.Scatter(x=xs, y=zs, mode="lines", line=dict(color=MAR, width=12), hoverinfo="skip"))
         fig.add_trace(go.Scatter(x=xs, y=zs, mode="lines", line=dict(color=mh.MATERIALES[s.mats[i0]][1], width=8),
-                                 hoverinfo="text", text=f"{s.mats[i0]}, n = {s.ns[i0]:.3f}"))
+                                 hoverinfo="text", text=f"{s.mats[i0]}, n = {s.ns[i0]:.4f}"))
         if nseg <= 30:
             fig.add_annotation(x=sum(xs) / 2, y=sum(zs) / 2, text=f"T{i0 + 1}", showarrow=False, font=dict(color=MAR, size=11), bgcolor="#fff")
     if celdas and len(celdas) > 1:
@@ -184,12 +191,12 @@ def dibujar_poli(s, y, H, ns=None):
     fig.add_shape(type="line", x0=xd, x1=xd, y0=s.zmin, y1=L, line=dict(color=MAR, width=1.5))
     for zp in (L, s.zmin):
         fig.add_annotation(x=xd, y=zp, ax=xd, ay=zm_, axref="x", ayref="y", text="", showarrow=True, arrowhead=2, arrowsize=1.2, arrowwidth=1.5, arrowcolor=MAR)
-    fig.add_annotation(x=xd, y=zm_, text=f"y = {y:.3f} m", showarrow=False, xanchor="left", xshift=6, font=dict(color=MAR, size=13))
-    fig.add_annotation(x=xm, y=L, text=f"T = {s.T(y):.3f} m", showarrow=False, yshift=12, font=dict(color=MAR, size=12))
-    fig.add_annotation(x=x1, y=top, text=f"y + BL = {H:.3f} m", showarrow=False, xanchor="left", xshift=6, font=dict(color="#9a7410", size=12))
+    fig.add_annotation(x=xd, y=zm_, text=f"y = {y:.4f} m", showarrow=False, xanchor="left", xshift=6, font=dict(color=MAR, size=13))
+    fig.add_annotation(x=xm, y=L, text=f"T = {s.T(y):.4f} m", showarrow=False, yshift=12, font=dict(color=MAR, size=12))
+    fig.add_annotation(x=x1, y=top, text=f"y + BL = {H:.4f} m", showarrow=False, xanchor="left", xshift=6, font=dict(color="#9a7410", size=12))
     ztop = min(s.pts[0][1], s.pts[-1][1])
     fig.add_trace(go.Scatter(x=[x0, x1], y=[ztop, ztop], mode="lines", line=dict(color=MAR, width=1.5, dash="dot"), hoverinfo="skip"))
-    fig.add_annotation(x=x0, y=ztop, text=f"Altura de la sección = {s.altura:.3f} m", showarrow=False, xanchor="left", yshift=12, font=dict(color=MAR, size=11))
+    fig.add_annotation(x=x0, y=ztop, text=f"Altura de la sección = {s.altura:.4f} m", showarrow=False, xanchor="left", yshift=12, font=dict(color=MAR, size=11))
     fig.update_layout(title="Visualización dinámica de la sección", height=500, plot_bgcolor="#faf8f3", paper_bgcolor="rgba(0,0,0,0)", showlegend=False,
                       dragmode="pan", margin=dict(l=40, r=60, t=60, b=50), font=dict(color=MAR),
                       xaxis=dict(title="Distancia horizontal (m)", gridcolor="#e8e5dc"),
@@ -266,7 +273,7 @@ def tabla_compuesta():
             c2.button("🗑", key=f"{clave}_del_{r['id']}", on_click=_eliminar, args=(clave, r["id"]), disabled=len(filas) <= 2, help="Eliminar este tramo")
             k = f"{clave}_{r['tp'][:4]}_%s_{r['id']}"
             u1, u2 = st.columns(2)
-            nb = lambda col, etq, v, key, lo=0.01, hi=None, st_=0.1, fm="%.3f": col.number_input(etq, min_value=lo, max_value=hi, value=min(max(float(v), lo), hi if hi else 1e9), step=st_, format=fm, key=key)
+            nb = lambda col, etq, v, key, lo=0.01, hi=None, st_=0.1, fm="%.4f": col.number_input(etq, min_value=lo, max_value=hi, value=min(max(float(v), lo), hi if hi else 1e9), step=st_, format=fm, key=key)
             if r["tp"] == "Vertical":
                 r["a"] = nb(u1, "Altura (m)", r["a"], k % "a")
                 r["sent"] = u2.selectbox("Sentido", ["Desciende", "Asciende"], index=["Desciende", "Asciende"].index(r["sent"]), key=k % "s")
@@ -286,7 +293,7 @@ def tabla_compuesta():
             m1, m2 = st.columns([3, 2])
             r["mat"] = m1.selectbox("Material del tramo", MATL, index=MATL.index(r["mat"]), key=f"{clave}_m_{r['id']}", on_change=_cambio_material, args=(clave, r["id"]))
             kn = f"{clave}_n_{r['id']}"
-            r["n"] = m2.number_input("n", min_value=0.001, step=0.001, format="%.3f", key=kn, **({} if kn in st.session_state else {"value": float(r["n"])}))
+            r["n"] = m2.number_input("n", min_value=0.001, step=0.001, format="%.4f", key=kn, **({} if kn in st.session_state else {"value": float(r["n"])}))
     b1, b2 = st.columns(2)
     b1.button("➕ Agregar tramo", key=clave + "_add", on_click=_agregar, args=(clave,), width="stretch")
     b2.button("↺ Restablecer ejemplo", key=clave + "_reset", on_click=_restablecer, args=(clave,), width="stretch")
@@ -331,11 +338,11 @@ def dibujar_cerrada(s, y, H, mats):
     fig.add_trace(go.Scatter(x=xs, y=zs, mode="lines", line=dict(color=mh.MATERIALES[mats[0]][1], width=8), hoverinfo="text", text=mats[0]))
     fig.add_trace(go.Scatter(x=[-ancho, ancho], y=[H, H], mode="lines", line=dict(color=ORO, width=2, dash="dash"), hoverinfo="skip"))
     def nota(x, yy, t, size=12, **kw): fig.add_annotation(x=x, y=yy, text=t, showarrow=False, font=dict(color=MAR, size=size), **kw)
-    nota(0, y / 2, f"y = {y:.3f} m", 14)
-    nota(0, y, f"T = {s.T(y):.3f} m", yshift=12)
-    nota(ancho, H, f"y + BL = {H:.3f} m", xanchor="left", xshift=6)
+    nota(0, y / 2, f"y = {y:.4f} m", 14)
+    nota(0, y, f"T = {s.T(y):.4f} m", yshift=12)
+    nota(ancho, H, f"y + BL = {H:.4f} m", xanchor="left", xshift=6)
     fig.add_trace(go.Scatter(x=[-ancho, ancho], y=[s.altura, s.altura], mode="lines", line=dict(color=MAR, width=1.5, dash="dot"), hoverinfo="skip"))
-    nota(0, s.altura if not circ else s.D, (f"D = {s.D:.3f} m" if circ else f"H sección = {s.altura:.3f} m"), yshift=14)
+    nota(0, s.altura if not circ else s.D, (f"D = {s.D:.4f} m" if circ else f"H sección = {s.altura:.4f} m"), yshift=14)
     fig.update_layout(title="Visualización dinámica de la sección", height=500, plot_bgcolor="#faf8f3", paper_bgcolor="rgba(0,0,0,0)", showlegend=False,
                       dragmode="pan", margin=dict(l=40, r=60, t=60, b=50), font=dict(color=MAR),
                       xaxis=dict(title="Distancia horizontal (m)", gridcolor="#e8e5dc"), yaxis=dict(title="Elevación (m)", gridcolor="#e8e5dc", scaleanchor="x"))
@@ -394,7 +401,7 @@ def tabla_seccion(tipo):
                 r["a"] = c1.number_input(f"X (m) | punto {i + 1}", value=float(r["a"]), step=0.1, format="%.2f", key=k % "a")
                 r["b"] = c2.number_input("Y (m)", value=float(r["b"]), step=0.1, format="%.2f", key=k % "b")
             else:
-                r["a"] = c1.number_input(f"Longitud (m) | tramo {i + 1}", min_value=0.01, value=max(float(r["a"]), 0.01), step=0.1, format="%.3f", key=k % "a")
+                r["a"] = c1.number_input(f"Longitud (m) | tramo {i + 1}", min_value=0.01, value=max(float(r["a"]), 0.01), step=0.1, format="%.4f", key=k % "a")
                 r["b"] = c2.number_input("Ángulo (°)", min_value=-90.0, max_value=90.0, value=float(r["b"]), step=5.0, format="%.1f", key=k % "b")
             c3.button("🗑", key=k % "del", on_click=_eliminar, args=(clave, r["id"]), disabled=len(filas) <= minimo, help="Eliminar esta fila")
             if xy and i == len(filas) - 1:
@@ -402,7 +409,7 @@ def tabla_seccion(tipo):
             else:
                 m1, m2 = st.columns([3, 2])
                 r["mat"] = m1.selectbox("Material del tramo", MATL, index=MATL.index(r["mat"]), key=k % "m", on_change=_cambio_material, args=(clave, r["id"]))
-                r["n"] = m2.number_input("n", min_value=0.001, step=0.001, format="%.3f", key=k % "n", **({} if (k % "n") in st.session_state else {"value": float(r["n"])}))
+                r["n"] = m2.number_input("n", min_value=0.001, step=0.001, format="%.4f", key=k % "n", **({} if (k % "n") in st.session_state else {"value": float(r["n"])}))
     b1, b2 = st.columns(2)
     b1.button("➕ Agregar punto" if xy else "➕ Agregar tramo", key=clave + "_add", on_click=_agregar, args=(clave,), width="stretch")
     b2.button("↺ Restablecer ejemplo", key=clave + "_reset", on_click=_restablecer, args=(clave,), width="stretch")
@@ -483,7 +490,7 @@ with izq:
     else:
         inc = {"uniforme_Q": "Caudal (Q)", "uniforme_S": "Pendiente (S)", "critico": "Tirante crítico (yc)"}.get(modulo, "Tirante normal (y)")
 
-    st.markdown("### Sección")
+    st.markdown("### 🌊 Sección del canal")
     if modulo == "compuesta":
         tipo = "Sección compuesta"
         modo_ing = st.radio("Cómo ingresar la sección", ["Por tramos (rectas, arcos y parábolas)", "Por coordenadas (X, Y)"])
@@ -492,14 +499,14 @@ with izq:
                             ["Rectangular", "Trapezoidal", "Triangular", "Circular", "Parabólica", "Por coordenadas (X, Y)", "Por ángulos y tramos"])
     POLI = tipo in ("Por coordenadas (X, Y)", "Por ángulos y tramos", "Sección compuesta")
     FORMA = tipo in ("Circular", "Parabólica")
-    b = st.number_input("Ancho de solera b (m)", 0.0, value=0.8, step=0.1, format="%.3f") if (tipo != "Triangular" and modulo != "diseno" and not POLI and not FORMA) else 0.0
-    z = st.number_input("Talud z (H:V)", 0.0, value=1.0, step=0.25, format="%.3f") if (tipo != "Rectangular" and not POLI and not FORMA) else 0.0
+    b = st.number_input("Ancho de solera b (m)", 0.0, value=0.8, step=0.1, format="%.4f") if (tipo != "Triangular" and modulo != "diseno" and not POLI and not FORMA) else 0.0
+    z = st.number_input("Talud z (H:V)", 0.0, value=1.0, step=0.25, format="%.4f") if (tipo != "Rectangular" and not POLI and not FORMA) else 0.0
     if tipo == "Circular" and modulo != "diseno":
-        Dc = st.number_input("Diámetro D (m)", 0.0, value=1.0, step=0.1, format="%.3f")
+        Dc = st.number_input("Diámetro D (m)", 0.0, value=1.0, step=0.1, format="%.4f")
     if tipo == "Parabólica":
-        Tpar = st.number_input("Espejo de agua T (m), a la altura H", 0.0, value=1.0, step=0.1, format="%.3f")
-        Hpar = st.number_input("Altura de la sección H (m)", 0.0, value=0.6, step=0.1, format="%.3f")
-        if Tpar > 0 and Hpar > 0: st.caption(f"Foco de la parábola: k = T²/(16·H) = {Tpar ** 2 / (16 * Hpar):.3f} m")
+        Tpar = st.number_input("Espejo de agua T (m), a la altura H", 0.0, value=1.0, step=0.1, format="%.4f")
+        Hpar = st.number_input("Altura de la sección H (m)", 0.0, value=0.6, step=0.1, format="%.4f")
+        if Tpar > 0 and Hpar > 0: st.caption(f"Foco de la parábola: k = T²/(16·H) = {Tpar ** 2 / (16 * Hpar):.4f} m")
     if POLI:
         junc = None
         if modulo == "compuesta" and modo_ing.startswith("Por tramos"):
@@ -541,7 +548,7 @@ with izq:
     def material(etq, defecto, clave):
         mt = st.selectbox(etq, MAT, index=MAT.index(defecto), key="m_" + clave)
         return mt, st.number_input(f"n de {etq.lower().replace('material de ', '')}", 0.0, value=mh.MATERIALES[mt][0], step=0.001,
-                                   format="%.3f", key=f"n_{clave}_{mt}")
+                                   format="%.4f", key=f"n_{clave}_{mt}")
     op = ["Un solo material", "Fondo y paredes distintos", "Fondo y cada pared distintos"] if tipo != "Triangular" \
         else ["Un solo material", "Cada pared distinta"]
     modo_txt = st.radio("Materiales del canal", op) if not (POLI or FORMA) else op[0]
@@ -570,30 +577,33 @@ with izq:
         st.markdown(tabla_cowan(), unsafe_allow_html=True)
         st.caption("Tabla de guía: puedes escribir cualquier valor, aunque esté fuera del rango.")
         a, c_, d = st.columns(3)
-        k1 = a.number_input("n1", value=0.0, step=0.001, format="%.3f"); k2 = c_.number_input("n2", value=0.0, step=0.001, format="%.3f")
-        k3 = d.number_input("n3", value=0.0, step=0.001, format="%.3f")
+        k1 = a.number_input("n1", value=0.0, step=0.001, format="%.4f"); k2 = c_.number_input("n2", value=0.0, step=0.001, format="%.4f")
+        k3 = d.number_input("n3", value=0.0, step=0.001, format="%.4f")
         e, f_ = st.columns(2)
-        k4 = e.number_input("n4", value=0.0, step=0.001, format="%.3f"); k5 = f_.number_input("m5", value=1.0, step=0.01, format="%.3f")
+        k4 = e.number_input("n4", value=0.0, step=0.001, format="%.4f"); k5 = f_.number_input("m5", value=1.0, step=0.01, format="%.4f")
 
-    st.markdown("### Datos hidráulicos")
+    st.markdown("### 💧 Datos hidráulicos")
     Q = S = y = None
     if inc != "Caudal (Q)":
         q1, q2 = st.columns([2, 1])
-        Qv = q1.number_input("Caudal Q", 0.0, value=300.0, format="%.3f")
-        Q = Qv * (0.001 if q2.selectbox("Unidad Q", ["L/s", "m³/s"]) == "L/s" else 1)
+        Qv = q1.number_input("Caudal Q", 0.0, value=300.0, format="%.4f")
+        unidad_q = q2.selectbox("Unidad Q", ["L/s", "m³/s", "ft³/s"], key="unidad_caudal_principal")
+        factores_q = {"L/s": 0.001, "m³/s": 1.0, "ft³/s": 0.028316846592}
+        Q = Qv * factores_q[unidad_q]
+        st.caption(f"Caudal convertido internamente: {Q:.4f} m³/s")
     if inc not in ("Pendiente (S)", "Tirante crítico (yc)"):
         s1, s2 = st.columns([2, 1])
         Sv = s1.number_input("Pendiente S", 0.0, value=1.5, format="%.4f")
         S = Sv / {"%": 100, "m/m": 1, "‰": 1000}[s2.selectbox("Unidad S", ["%", "m/m", "‰"])]
     if inc not in ("Tirante normal (y)", "Tirante crítico (yc)"):
-        y = st.number_input("Tirante y (m)", 0.0, value=0.2, format="%.3f")
+        y = st.number_input("Tirante y (m)", 0.0, value=0.2, format="%.4f")
 
     metodo_sol, p_met = "Manning", 0.0
     if True:
         st.markdown("### Método de solución")
         metodo_sol = st.selectbox("Fórmula", ["Manning", "Chezy", "Bazin", "Ganguillet-Kutter"], key="msol")
         if metodo_sol == "Chezy": p_met = st.number_input("Coeficiente C de Chezy", 0.0, value=50.0, format="%.2f")
-        if metodo_sol == "Bazin": p_met = st.number_input("Coeficiente γ de Bazin", 0.0, value=0.16, format="%.3f")
+        if metodo_sol == "Bazin": p_met = st.number_input("Coeficiente γ de Bazin", 0.0, value=0.16, format="%.4f")
         if metodo_sol.startswith("Gang"): st.caption("Fórmula de Kutter válida para S ≥ 0.0005 (Villón).")
     st.markdown("### Verificación de velocidad")
     v1, v2 = st.columns(2)
@@ -603,15 +613,19 @@ with izq:
     st.markdown("### Energía específica")
     en_on = st.checkbox("Calcular la energía específica", value=True)
     st.markdown("### Borde libre")
-    with st.expander("Tabla guía de métodos de borde libre", expanded=True):
-        st.markdown(tabla_bl(), unsafe_allow_html=True)
-        st.caption("Valores en metros. Las tablas por caudal y por ancho de solera son referenciales.")
-    ops_bl = mh.METODOS_BL if tipo in ("Rectangular", "Trapezoidal") else [m_ for m_ in mh.METODOS_BL if m_ != "Villón por ancho de solera"]
-    metodo = st.selectbox("Método de borde libre", ops_bl)
     bl_man = 0.3
-    if metodo == "Valor manual":
-        bl_man = st.number_input("Borde libre BL (m)", 0.0, value=0.3, step=0.05, format="%.3f")
-    st.caption("Elijas el método que elijas, los resultados muestran la comparación entre todos.")
+    if tipo == "Circular":
+        metodo = "Borde libre geométrico (D − y)"
+        st.info("En una sección circular no se aplica el borde libre empírico de canales abiertos: se calcula como la altura libre interior, BL = D − y.")
+    else:
+        with st.expander("Tabla guía de métodos de borde libre", expanded=True):
+            st.markdown(tabla_bl(), unsafe_allow_html=True)
+            st.caption("Valores en metros. Las tablas por caudal y por ancho de solera son referenciales.")
+        ops_bl = mh.METODOS_BL if tipo in ("Rectangular", "Trapezoidal") else [m_ for m_ in mh.METODOS_BL if m_ != "Villón por ancho de solera"]
+        metodo = st.selectbox("Método de borde libre", ops_bl)
+        if metodo == "Valor manual":
+            bl_man = st.number_input("Borde libre BL (m)", 0.0, value=0.3, step=0.05, format="%.4f")
+        st.caption("Elijas el método que elijas, los resultados muestran la comparación entre todos.")
     if st.button("← Menú de cálculos"):
         st.session_state.pag = "menu"
         st.rerun()
@@ -700,26 +714,32 @@ if (inc == "Tirante normal (y)" and Q > mh.q_flujo(s, nfun, S, y, metodo_sol, p_
     st.stop()
 if getattr(s, "altura", None) is not None and y > s.altura + 1e-9:
     with tab_sec:
-        st.error(f"El tirante ({y:.3f} m) supera la altura de la sección ({s.altura:.3f} m): el agua se desbordaría.")
+        st.error(f"El tirante ({y:.4f} m) supera la altura de la sección ({s.altura:.4f} m): el agua se desbordaría.")
         st.plotly_chart(dib(s, y, y, mats, ns), theme=None, config=CONFIG)
     st.stop()
 A, P, T = s.A(y), s.P(y), s.T(y)
 R, V, n = A / P, Q / A, nfun(y)
 if SUBAREAS:
     n = A * R ** (2 / 3) * math.sqrt(S) / Q                 # n equivalente (Manning) de toda la sección
-ORIGEN = "División en subáreas, n equivalente" if SUBAREAS else ("Valor directo" if modo == 0 else "Horton-Einstein") + (" + Cowan" if cow_on else "")
+ORIGEN = "Subáreas: n equivalente global (referencial)" if SUBAREAS else ("Valor directo" if modo == 0 else "Horton-Einstein") + (" + Cowan" if cow_on else "")
 F, yc = mh.froude(s, Q, y), mh.tirante_critico(s, Q)
 reg, msg_reg = mh.regimen(F)
 est, msg_v = mh.verificar_velocidad(V, vmin, vmax)
 rev = all(mt in ("Concreto (acabado con llana)", "Concreto (sin acabado)", "Mampostería de piedra") for mt in (s.mats if POLI else mats))
 C = mh.c_usbr(Q)
 bt = s.b if tipo in ("Rectangular", "Trapezoidal") else 0.0
-BL, f_bl, crit = mh.borde_libre(metodo, y, Q, rev, bl_man, bt)
-comp = mh.comparar_bl(y, Q, rev, bt)
+if isinstance(s, mh.Circular):
+    BL = max(0.0, s.D - y)
+    f_bl = f"BL = D − y = {s.D:.4f} − {y:.4f}"
+    crit = "Borde libre geométrico interior de la sección circular: diámetro menos tirante."
+    comp = []
+else:
+    BL, f_bl, crit = mh.borde_libre(metodo, y, Q, rev, bl_man, bt)
+    comp = mh.comparar_bl(y, Q, rev, bt)
 E = y + V ** 2 / (2 * mh.G)
 Ec = mh.energia(s, Q, yc)
 y2 = mh.y_alterno(s, Q, y)
-y2t = f"{y2:.3f} m" if y2 is not None else "No existe"
+y2t = f"{y2:.4f} m" if y2 is not None else "No existe"
 FIJA = getattr(s, "altura", None) is not None          # sección con altura propia: el borde libre disponible es altura − y
 BLd = (s.altura - y) if FIJA else None
 origen = ("" if modo == 0 else " (Horton)") + (" (Cowan)" if cow_on else "")
@@ -739,15 +759,15 @@ def tarjetas(items):
 with tab_res:
     pdf_slot = st.container()
     st.markdown('<div class="grupo" style="margin-top:6px">Resultado principal</div>', unsafe_allow_html=True)
-    tarjetas([("Tirante crítico yc" if inc == "Tirante crítico (yc)" else "Tirante normal y", f"{y:.3f} m"), ("Caudal Q", f"{Q:.3f} m³/s"), ("Pendiente crítica Sc" if inc == "Tirante crítico (yc)" else "Pendiente S", f"{S:.3f} m/m")] + ([("Ancho de solera b", f"{s.b:.3f} m")] if (modulo == "diseno" and tipo not in ("Triangular", "Circular")) else [("Diámetro D", f"{s.D:.3f} m")] if (modulo == "diseno" and tipo == "Circular") else []))
+    tarjetas([("Tirante crítico yc" if inc == "Tirante crítico (yc)" else "Tirante normal y", f"{y:.4f} m"), ("Caudal Q", f"{Q:.4f} m³/s"), ("Pendiente crítica Sc" if inc == "Tirante crítico (yc)" else "Pendiente S", formato_pendiente(S))] + ([("Ancho de solera b", f"{s.b:.4f} m")] if (modulo == "diseno" and tipo not in ("Triangular", "Circular")) else [("Diámetro D", f"{s.D:.4f} m")] if (modulo == "diseno" and tipo == "Circular") else []))
     st.markdown('<div class="grupo">Geometría del flujo</div>', unsafe_allow_html=True)
-    tarjetas([("Área A", f"{A:.3f} m²"), ("Perímetro mojado P", f"{P:.3f} m"), ("Espejo de agua T", f"{T:.3f} m"),
-              ("Radio hidráulico R", f"{R:.3f} m"), ("Profundidad hidráulica A/T", f"{A / T:.3f} m")])
+    tarjetas([("Área A", f"{A:.4f} m²"), ("Perímetro mojado P", f"{P:.4f} m"), ("Espejo de agua T", f"{T:.4f} m"),
+              ("Radio hidráulico R", f"{R:.4f} m"), ("Profundidad hidráulica A/T", f"{A / T:.4f} m")])
     st.markdown('<div class="grupo">Rugosidad</div>', unsafe_allow_html=True)
-    tarjetas([("n usada", f"{n:.3f}"), ("Origen", ORIGEN)])
+    tarjetas([("n usada", f"{n:.4f}"), ("Origen", ORIGEN)])
     st.markdown('<div class="grupo">Velocidad y régimen</div>', unsafe_allow_html=True)
-    tarjetas([("Velocidad V", f"{V:.3f} m/s"), ("Número de Froude F", f"{F:.3f}"), ("Régimen", reg),
-              ("Tirante crítico yc", f"{yc:.3f} m")])
+    tarjetas([("Velocidad V", f"{V:.4f} m/s"), ("Número de Froude F", f"{F:.4f}"), ("Régimen", reg),
+              ("Tirante crítico yc", f"{yc:.4f} m")])
     st.write("")
     (st.success if est == "ok" else st.warning)(msg_v)
     av = mh.validar_pendiente(S)
@@ -755,29 +775,33 @@ with tab_res:
     st.info(msg_reg)
     if en_on:
         st.markdown('<div class="grupo">Energía específica</div>', unsafe_allow_html=True)
-        tarjetas([("Energía específica E", f"{E:.3f} m"), ("Energía mínima Emín", f"{Ec:.3f} m"), ("Tirante alterno y₂", y2t)])
+        tarjetas([("Energía específica E", f"{E:.4f} m"), ("Energía mínima Emín", f"{Ec:.4f} m"), ("Tirante alterno y₂", y2t)])
     st.markdown('<div class="grupo">Borde libre</div>', unsafe_allow_html=True)
-    if FIJA:
-        tarjetas([("BL requerido (método elegido)", f"{BL:.3f} m"), ("BL disponible = altura − y", f"{BLd:.3f} m"), ("Altura de la sección", f"{s.altura:.3f} m"), ("Altura mínima necesaria = y + BL", f"{y + BL:.3f} m")])
-        if isinstance(s, mh.Circular): st.caption(f"Relación y/D = {y / s.D:.3f}")
+    if isinstance(s, mh.Circular):
+        tarjetas([("Diámetro interior D", f"{s.D:.4f} m"), ("Tirante y", f"{y:.4f} m"), ("Borde libre geométrico D − y", f"{BL:.4f} m")])
+        st.latex(rf"BL=D-y={s.D:.4f}-{y:.4f}={BL:.4f}\ \mathrm{{m}}")
+        st.caption(crit)
+    elif FIJA:
+        tarjetas([("BL requerido (método elegido)", f"{BL:.4f} m"), ("BL disponible = altura − y", f"{BLd:.4f} m"), ("Altura de la sección", f"{s.altura:.4f} m"), ("Altura mínima necesaria = y + BL", f"{y + BL:.4f} m")])
         (st.success if BLd >= BL - 1e-9 else st.warning)(
-            f"Cumple: el borde libre disponible ({BLd:.3f} m) es mayor o igual al requerido ({BL:.3f} m)." if BLd >= BL - 1e-9 else
-            f"No cumple: el borde libre disponible ({BLd:.3f} m) es menor que el requerido ({BL:.3f} m). Conviene aumentar la altura de la sección o reducir el tirante.")
-        if not isinstance(s, mh.Circular) and BLd > 1.25 * BL:
-            st.info(f"Hay altura de más: la sección es {s.altura - (y + BL):.3f} m más alta de lo necesario. La altura mínima es y + BL = {y + BL:.3f} m (línea dorada del dibujo); "
-                    "podrías recortar la sección hasta ahí y ahorrar material.")
+            f"Cumple: el borde libre disponible ({BLd:.4f} m) es mayor o igual al requerido ({BL:.4f} m)." if BLd >= BL - 1e-9 else
+            f"No cumple: el borde libre disponible ({BLd:.4f} m) es menor que el requerido ({BL:.4f} m). Conviene aumentar la altura de la sección o reducir el tirante.")
+        if BLd > 1.25 * BL:
+            st.info(f"Hay altura de más: la sección es {s.altura - (y + BL):.4f} m más alta de lo necesario.")
+        st.caption("Criterio aplicado: " + crit)
     else:
-        tarjetas([("Borde libre BL", f"{BL:.3f} m"), ("Altura total H = y + BL", f"{y + BL:.3f} m"), ("BL como % de y", f"{100 * BL / y:.1f} %")])
-    st.caption("Criterio aplicado: " + crit)
-    if metodo.startswith("USBR") and Q > 85: st.warning("El caudal supera los 85 m³/s: el USBR queda fuera de su rango.")
-    st.markdown("##### Comparación de métodos de borde libre")
-    filas_c = ""
-    for m_, b_, c_ in comp:
-        sel = m_ == metodo
-        celdas = "<td class='na'>No aplica</td><td class='na'>-</td>" if b_ is None else f"<td class='v'>{b_:.3f}</td><td class='v'>{y + b_:.3f}</td>"
-        filas_c += f"<tr class='{'sel' if sel else ''}'><td>{'✓ ' if sel else ''}{m_}</td>{celdas}<td>{c_}</td></tr>"
-    st.markdown("<table class='cw'><tr><th>Método</th><th>BL (m)</th><th>H = y + BL (m)</th><th>Criterio</th></tr>" + filas_c + "</table>", unsafe_allow_html=True)
-    st.caption("✓ marca el método elegido.")
+        tarjetas([("Borde libre BL", f"{BL:.4f} m"), ("Altura total H = y + BL", f"{y + BL:.4f} m"), ("BL como % de y", f"{100 * BL / y:.1f} %")])
+        st.caption("Criterio aplicado: " + crit)
+    if not isinstance(s, mh.Circular):
+        if metodo.startswith("USBR") and Q > 85: st.warning("El caudal supera los 85 m³/s: el USBR queda fuera de su rango.")
+        st.markdown("##### Comparación de métodos de borde libre")
+        filas_c = ""
+        for m_, b_, c_ in comp:
+            sel = m_ == metodo
+            celdas = "<td class='na'>No aplica</td><td class='na'>-</td>" if b_ is None else f"<td class='v'>{b_:.4f}</td><td class='v'>{y + b_:.4f}</td>"
+            filas_c += f"<tr class='{'sel' if sel else ''}'><td>{'✓ ' if sel else ''}{m_}</td>{celdas}<td>{c_}</td></tr>"
+        st.markdown("<table class='cw'><tr><th>Método</th><th>BL (m)</th><th>H = y + BL (m)</th><th>Criterio</th></tr>" + filas_c + "</table>", unsafe_allow_html=True)
+        st.caption("✓ marca el método elegido.")
 
 
 if en_on:
@@ -785,10 +809,10 @@ if en_on:
         st.caption("🔍 Usa la rueda del mouse para hacer zoom, arrastra para desplazarte y doble clic para restablecer la vista.")
         st.plotly_chart(modulo_energia.curva(s, Q, y, yc, y2), theme=None, config=CONFIG)
         if y2 is None:
-            st.info(f"Para E = {E:.3f} m no existe un tirante alterno dentro de la altura de la sección (la energía supera la que tiene con la sección llena). El mínimo de energía ocurre en el tirante crítico yc = {yc:.3f} m.")
+            st.info(f"Para E = {E:.4f} m no existe un tirante alterno dentro de la altura de la sección (la energía supera la que tiene con la sección llena). El mínimo de energía ocurre en el tirante crítico yc = {yc:.4f} m.")
         else:
-            st.info(f"Para E = {E:.3f} m existen dos tirantes: y = {y:.3f} m ({reg.lower()}) y y₂ = {y2:.3f} m "
-                    f"({'supercrítico' if y2 < yc else 'subcrítico'}). El mínimo de energía ocurre en el tirante crítico yc = {yc:.3f} m.")
+            st.info(f"Para E = {E:.4f} m existen dos tirantes: y = {y:.4f} m ({reg.lower()}) y y₂ = {y2:.4f} m "
+                    f"({'supercrítico' if y2 < yc else 'subcrítico'}). El mínimo de energía ocurre en el tirante crítico yc = {yc:.4f} m.")
 
 
 def _paso(num, titulo):
@@ -807,25 +831,25 @@ with tab_proc:
             _paso("D", "Dimensionamiento de la sección")
             st.latex(r"y=\frac{D}{2}\qquad A=\frac{\pi D^2}{8}\qquad P=\frac{\pi D}{2}\qquad R=\frac{D}{4}")
             st.caption("La sección circular de máxima eficiencia hidráulica es el semicírculo. Se busca el diámetro D para el que Q(D, y = D/2) iguale al caudal de diseño, por bisección.")
-            _res(f"D = {s.D:.3f} m | y = {y:.3f} m (semicírculo)")
+            _res(f"D = {s.D:.4f} m | y = {y:.4f} m (semicírculo)")
     if modulo == "diseno" and tipo not in ("Triangular", "Circular"):
         with st.container(border=True):
             _paso("D", "Dimensionamiento de la sección")
             st.latex(r"\frac{b}{y}=f\,(\sqrt{1+z^2}-z)\qquad f=2\ (\mathrm{MEH}),\ 4\ (\mathrm{MI}),\ 3\ (\text{intermedia})")
-            st.latex(rf"\frac{{b}}{{y}}={mh.FACTORES[crit_d]}\,(\sqrt{{1+{z:.3f}^2}}-{z:.3f})={m_d:.3f}")
+            st.latex(rf"\frac{{b}}{{y}}={mh.FACTORES[crit_d]}\,(\sqrt{{1+{z:.4f}^2}}-{z:.4f})={m_d:.4f}")
             st.caption("Se busca el tirante y para el que Q(y, b = m·y) iguale al caudal de diseño, por bisección, con el método y la rugosidad elegidos.")
-            _res(f"y = {y_d:.3f} m | b = {s.b:.3f} m ({crit_d})")
+            _res(f"y = {y_d:.4f} m | b = {s.b:.4f} m ({crit_d})")
     with st.container(border=True):
         _paso(1, "Datos del problema")
-        st.markdown(f"- Sección **{tipo.lower()}**" + (f", b = {s.b:.3f} m" if s.b > 0 else "") + (f", z = {s.z:.3f}" if s.z > 0 else "") + (f", D = {Dc:.3f} m" if tipo == "Circular" else "") + (f", T = {Tpar:.3f} m, H = {Hpar:.3f} m" if tipo == "Parabólica" else "")
-                    + f"\n- Caudal Q = {Q:.3f} m³/s (en SI) | Pendiente S = {S:.4f} m/m\n- Incógnita: {inc.split(' (')[0].lower()}")
+        st.markdown(f"- Sección **{tipo.lower()}**" + (f", b = {s.b:.4f} m" if s.b > 0 else "") + (f", z = {s.z:.4f}" if s.z > 0 else "") + (f", D = {Dc:.4f} m" if tipo == "Circular" else "") + (f", T = {Tpar:.4f} m, H = {Hpar:.4f} m" if tipo == "Parabólica" else "")
+                    + f"\n- Caudal Q = {Q:.4f} m³/s (en SI) | Pendiente S = {formato_pendiente(S)}\n- Incógnita: {inc.split(' (')[0].lower()}")
 
     with st.container(border=True):
         _paso(2, "Rugosidad")
         if SUBAREAS:
             st.markdown("Cada subárea tiene su propio n (Horton dentro de la subárea" + (", corregido con Cowan" if cow_on else "") + "). Los cortes " + ("sí" if corte_pm else "no") + " cuentan como perímetro mojado.")
             _d = mh.detalle_subareas(s, y, S, metodo_sol, p_met)
-            st.table(pd.DataFrame([(d["nombre"], d["tramos"], f"{d['A']:.3f}", f"{d['P']:.3f}", f"{d['n']:.3f}", f"{d['R']:.3f}") for d in _d],
+            st.table(pd.DataFrame([(d["nombre"], d["tramos"], f"{d['A']:.4f}", f"{d['P']:.4f}", f"{d['n']:.4f}", f"{d['R']:.4f}") for d in _d],
                                   columns=["Subárea", "Tramos", "A (m²)", "P (m)", "n", "R (m)"]).set_index("Subárea"))
         if modo == 0 and not cow_on:
             st.markdown(f"Material: **{mats[0]}**, con n tomado directamente.")
@@ -837,38 +861,38 @@ with tab_proc:
                 pts = partes(y)
             suma, Pt = sum(p * nn ** 1.5 for p, nn in pts), sum(p for p, _ in pts)
             st.latex(r"n_e=\left(\frac{\sum P_i\,n_i^{3/2}}{P}\right)^{2/3}")
-            st.table(pd.DataFrame([(nm, f"{p:.3f}", f"{nn:.3f}", f"{p * nn ** 1.5:.4f}") for nm, (p, nn) in zip(nombres, pts)],
+            st.table(pd.DataFrame([(nm, f"{p:.4f}", f"{nn:.4f}", f"{p * nn ** 1.5:.4f}") for nm, (p, nn) in zip(nombres, pts)],
                                   columns=["Parte", "Pᵢ (m)", "nᵢ", "Pᵢ·nᵢ^1.5"]).set_index("Parte"))
-            st.latex(rf"n_e=\left(\frac{{{suma:.4f}}}{{{Pt:.3f}}}\right)^{{2/3}}={n_base(y):.3f}")
+            st.latex(rf"n_e=\left(\frac{{{suma:.4f}}}{{{Pt:.4f}}}\right)^{{2/3}}={n_base(y):.4f}")
         if cow_on and not SUBAREAS:
             st.latex(r"n=(n_0+n_1+n_2+n_3+n_4)\,m_5")
-            st.latex(rf"n=({n_base(y):.3f}+{k1:.3f}+{k2:.3f}+{k3:.3f}+{k4:.3f})\times{k5:.3f}={n:.3f}")
-        _res(f"n equivalente (Manning) = {n:.3f}" if SUBAREAS else f"n = {n:.3f}" + ("" if modo == 0 and not cow_on else (" (Horton-Einstein)" if modo and not cow_on else (" (Horton + Cowan)" if modo else " (Cowan)"))))
+            st.latex(rf"n=({n_base(y):.4f}+{k1:.4f}+{k2:.4f}+{k3:.4f}+{k4:.4f})\times{k5:.4f}={n:.4f}")
+        _res(f"n equivalente global (Manning) = {n:.4f}" if SUBAREAS else f"n = {n:.4f}" + ("" if modo == 0 and not cow_on else (" (Horton-Einstein)" if modo and not cow_on else (" (Horton + Cowan)" if modo else " (Cowan)"))))
 
     with st.container(border=True):
         _paso(3, f"Ecuación de {metodo_sol}")
         Cc_ = mh.coef(metodo_sol, R, S, n, p_met)
         if SUBAREAS:
             st.latex(r"Q=\sum_i Q_i\qquad " + (r"Q_i=\frac{1}{n_i}\,A_i\,R_i^{2/3}\,S^{1/2}" if metodo_sol == "Manning" else r"Q_i=C_i\,A_i\,\sqrt{R_i\,S}"))
-            st.table(pd.DataFrame([(d["nombre"], f"{d['Q']:.3f}", f"{100 * d['Q'] / Q:.1f} %") for d in _d], columns=["Subárea", "Qᵢ (m³/s)", "% del caudal"]).set_index("Subárea"))
-            st.latex(rf"\sum Q_i={sum(d['Q'] for d in _d):.3f}\ \mathrm{{m^3/s}}")
+            st.table(pd.DataFrame([(d["nombre"], f"{d['Q']:.4f}", f"{100 * d['Q'] / Q:.1f} %") for d in _d], columns=["Subárea", "Qᵢ (m³/s)", "% del caudal"]).set_index("Subárea"))
+            st.latex(rf"\sum Q_i={sum(d['Q'] for d in _d):.4f}\ \mathrm{{m^3/s}}")
         else:
             FORM = {"Manning": r"C=\frac{R^{1/6}}{n}", "Chezy": r"C=\text{dato}", "Bazin": r"C=\frac{87}{1+\gamma/\sqrt{R}}",
                     "Ganguillet-Kutter": r"C=\frac{23+\frac{0.00155}{S}+\frac{1}{n}}{1+\left(23+\frac{0.00155}{S}\right)\frac{n}{\sqrt{R}}}"}
             if metodo_sol == "Manning":
                 st.latex(r"Q=\frac{1}{n}\,A\,R^{2/3}\,S^{1/2}")
-                st.latex(rf"{Q:.3f}=\frac{{1}}{{{n:.3f}}}\,({A:.3f})\,({R:.3f})^{{2/3}}\,({S:.4f})^{{1/2}}")
+                st.latex(rf"{Q:.4f}=\frac{{1}}{{{n:.4f}}}\,({A:.4f})\,({R:.4f})^{{2/3}}\,({S:.6f})^{{1/2}}")
             else:
                 st.latex(FORM[metodo_sol] + r"\qquad Q=C\,A\,\sqrt{R\,S}")
-                st.latex(rf"C={Cc_:.3f}\qquad {Q:.3f}={Cc_:.3f}\,({A:.3f})\sqrt{{({R:.3f})({S:.4f})}}")
+                st.latex(rf"C={Cc_:.4f}\qquad {Q:.4f}={Cc_:.4f}\,({A:.4f})\sqrt{{({R:.4f})({S:.6f})}}")
         if inc == "Tirante crítico (yc)":
             st.caption("Primero se halla el tirante crítico con Q²/g = Ac³/Tc; luego la pendiente crítica con la ecuación anterior.")
-            _res(f"Tirante crítico yc = {y:.3f} m  |  Pendiente crítica Sc = {S:.4f} m/m")
-        elif inc == "Pendiente (S)": _res(f"S = {S:.4f} m/m")
+            _res(f"Tirante crítico yc = {y:.4f} m  |  Pendiente crítica Sc = {formato_pendiente(S)}")
+        elif inc == "Pendiente (S)": _res(f"S = {formato_pendiente(S)}")
         elif it:
             st.caption("El tirante se halla por bisección, hasta que el intervalo sea menor que 0.000001 m.")
-            _res(f"y = {y:.3f} m | {len(it)} iteraciones")
-        else: _res(f"Q = {Q:.3f} m³/s")
+            _res(f"y = {y:.4f} m | {len(it)} iteraciones")
+        else: _res(f"Q = {Q:.4f} m³/s")
         if it:
             with st.expander("Ver tabla de iteraciones"):
                 st.dataframe(pd.DataFrame(it).rename(columns={"i": "Iteración", "y": "y (m)", "error": "Error (m)"}).set_index("Iteración")
@@ -878,52 +902,56 @@ with tab_proc:
         _paso(4, "Elementos geométricos")
         if tipo == "Circular":
             th = 2 * math.acos(max(-1.0, min(1.0, 1 - 2 * y / Dc)))
-            g = rf"\theta=2\arccos\left(1-\frac{{2y}}{{D}}\right)={th:.3f}\ \mathrm{{rad}}\\A=\frac{{D^2}}{{8}}(\theta-\sin\theta)={A:.3f}\ \mathrm{{m^2}}\\P=\frac{{D\,\theta}}{{2}}={P:.3f}\ \mathrm{{m}}\\T=D\sin\frac{{\theta}}{{2}}={T:.3f}\ \mathrm{{m}}"
+            g = rf"\theta=2\arccos\left(1-\frac{{2y}}{{D}}\right)={th:.4f}\ \mathrm{{rad}}\\A=\frac{{D^2}}{{8}}(\theta-\sin\theta)={A:.4f}\ \mathrm{{m^2}}\\P=\frac{{D\,\theta}}{{2}}={P:.4f}\ \mathrm{{m}}\\T=D\sin\frac{{\theta}}{{2}}={T:.4f}\ \mathrm{{m}}"
         elif tipo == "Parabólica":
-            g = rf"T=T_0\sqrt{{y/H}}={T:.3f}\ \mathrm{{m}}\\A=\frac{{2}}{{3}}\,T\,y={A:.3f}\ \mathrm{{m^2}}\\P=2\left[\frac{{x}}{{2}}\sqrt{{1+4a^2x^2}}+\frac{{\operatorname{{asinh}}(2ax)}}{{4a}}\right]={P:.3f}\ \mathrm{{m}}\qquad x=\frac{{T}}{{2}},\ a=\frac{{H}}{{(T_0/2)^2}}"
+            g = rf"T=T_0\sqrt{{y/H}}={T:.4f}\ \mathrm{{m}}\\A=\frac{{2}}{{3}}\,T\,y={A:.4f}\ \mathrm{{m^2}}\\P=2\left[\frac{{x}}{{2}}\sqrt{{1+4a^2x^2}}+\frac{{\operatorname{{asinh}}(2ax)}}{{4a}}\right]={P:.4f}\ \mathrm{{m}}\qquad x=\frac{{T}}{{2}},\ a=\frac{{H}}{{(T_0/2)^2}}"
         elif POLI:
-            g = rf"A=\sum A_i={A:.3f}\ \mathrm{{m^2}}\\P=\sum P_i={P:.3f}\ \mathrm{{m}}\\T=\sum T_i={T:.3f}\ \mathrm{{m}}"
+            g = rf"A=\sum A_i={A:.4f}\ \mathrm{{m^2}}\\P=\sum P_i={P:.4f}\ \mathrm{{m}}\\T=\sum T_i={T:.4f}\ \mathrm{{m}}"
         elif tipo == "Rectangular":
-            g = rf"A=b\,y={b:.3f}\times{y:.3f}={A:.3f}\ \mathrm{{m^2}}\\P=b+2y={b:.3f}+2({y:.3f})={P:.3f}\ \mathrm{{m}}\\T=b={T:.3f}\ \mathrm{{m}}"
+            g = rf"A=b\,y={b:.4f}\times{y:.4f}={A:.4f}\ \mathrm{{m^2}}\\P=b+2y={b:.4f}+2({y:.4f})={P:.4f}\ \mathrm{{m}}\\T=b={T:.4f}\ \mathrm{{m}}"
         elif tipo == "Trapezoidal":
-            g = rf"A=(b+zy)\,y=({b:.3f}+{z:.3f}\times{y:.3f})\times{y:.3f}={A:.3f}\ \mathrm{{m^2}}\\P=b+2y\sqrt{{1+z^2}}={P:.3f}\ \mathrm{{m}}\\T=b+2zy={T:.3f}\ \mathrm{{m}}"
+            g = rf"A=(b+zy)\,y=({b:.4f}+{z:.4f}\times{y:.4f})\times{y:.4f}={A:.4f}\ \mathrm{{m^2}}\\P=b+2y\sqrt{{1+z^2}}={P:.4f}\ \mathrm{{m}}\\T=b+2zy={T:.4f}\ \mathrm{{m}}"
         else:
-            g = rf"A=z\,y^2={z:.3f}\times{y:.3f}^2={A:.3f}\ \mathrm{{m^2}}\\P=2y\sqrt{{1+z^2}}={P:.3f}\ \mathrm{{m}}\\T=2zy={T:.3f}\ \mathrm{{m}}"
-        g += rf"\\R=\frac{{A}}{{P}}=\frac{{{A:.3f}}}{{{P:.3f}}}={R:.3f}\ \mathrm{{m}}\\\bar y=\frac{{A}}{{T}}={A / T:.3f}\ \mathrm{{m}}"
+            g = rf"A=z\,y^2={z:.4f}\times{y:.4f}^2={A:.4f}\ \mathrm{{m^2}}\\P=2y\sqrt{{1+z^2}}={P:.4f}\ \mathrm{{m}}\\T=2zy={T:.4f}\ \mathrm{{m}}"
+        g += rf"\\R=\frac{{A}}{{P}}=\frac{{{A:.4f}}}{{{P:.4f}}}={R:.4f}\ \mathrm{{m}}\\\bar y=\frac{{A}}{{T}}={A / T:.4f}\ \mathrm{{m}}"
         st.latex(r"\begin{gathered}" + g + r"\end{gathered}")
 
     with st.container(border=True):
         _paso(5, "Velocidad y número de Froude")
-        st.latex(rf"V=\frac{{Q}}{{A}}=\frac{{{Q:.3f}}}{{{A:.3f}}}={V:.3f}\ \mathrm{{m/s}}")
-        st.latex(rf"F=\frac{{V}}{{\sqrt{{g\,A/T}}}}=\frac{{{V:.3f}}}{{\sqrt{{9.81\times{A / T:.3f}}}}}={F:.3f}")
-        _res(f"F = {F:.3f} → régimen {reg.lower()}", "ok")
+        st.latex(rf"V=\frac{{Q}}{{A}}=\frac{{{Q:.4f}}}{{{A:.4f}}}={V:.4f}\ \mathrm{{m/s}}")
+        st.latex(rf"F=\frac{{V}}{{\sqrt{{g\,A/T}}}}=\frac{{{V:.4f}}}{{\sqrt{{9.81\times{A / T:.4f}}}}}={F:.4f}")
+        _res(f"F = {F:.4f} → régimen {reg.lower()}", "ok")
         st.caption(msg_reg)
 
     with st.container(border=True):
         _paso(6, "Tirante crítico" + (" y energía específica" if en_on else ""))
         st.latex(r"\frac{Q^2}{g}=\frac{A_c^3}{T_c}")
         if en_on:
-            st.latex(rf"E=y+\frac{{V^2}}{{2g}}={y:.3f}+\frac{{{V:.3f}^2}}{{2(9.81)}}={E:.3f}\ \mathrm{{m}}")
-            _res(f"Tirante crítico yc = {yc:.3f} m  |  Energía E = {E:.3f} m  |  Tirante alterno y₂ = {y2t}")
+            st.latex(rf"E=y+\frac{{V^2}}{{2g}}={y:.4f}+\frac{{{V:.4f}^2}}{{2(9.81)}}={E:.4f}\ \mathrm{{m}}")
+            _res(f"Tirante crítico yc = {yc:.4f} m  |  Energía E = {E:.4f} m  |  Tirante alterno y₂ = {y2t}")
         else:
-            _res(f"Tirante crítico yc = {yc:.3f} m")
+            _res(f"Tirante crítico yc = {yc:.4f} m")
 
     with st.container(border=True):
         _paso(7, "Verificación de velocidad")
-        st.latex(rf"{vmin:.2f}\ \le\ V={V:.3f}\ \le\ {vmax:.2f}\ \mathrm{{m/s}}")
+        st.latex(rf"{vmin:.2f}\ \le\ V={V:.4f}\ \le\ {vmax:.2f}\ \mathrm{{m/s}}")
         _res(msg_v, "ok" if est == "ok" else "mal")
 
     with st.container(border=True):
         _paso(8, "Borde libre")
-        if metodo.startswith("USBR"):
-            st.latex(rf"BL=\sqrt{{C\,y}}=\sqrt{{{C}\times{y:.3f}}}={BL:.3f}\ \mathrm{{m}}")
+        if isinstance(s, mh.Circular):
+            st.latex(rf"BL=D-y={s.D:.4f}-{y:.4f}={BL:.4f}\ \mathrm{{m}}")
+            _res(f"Borde libre geométrico = D − y = {BL:.4f} m")
+        elif metodo.startswith("USBR"):
+            st.latex(rf"BL=\sqrt{{C\,y}}=\sqrt{{{C}\times{y:.4f}}}={BL:.4f}\ \mathrm{{m}}")
         elif metodo.startswith("Máximo"):
             d = 5 if rev else 3
-            st.latex(rf"BL=\frac{{y}}{{{d}}}=\frac{{{y:.3f}}}{{{d}}}={BL:.3f}\ \mathrm{{m}}")
-        if not (metodo.startswith("USBR") or metodo.startswith("Máximo")):
-            st.markdown(f"**{f_bl}**")
-        st.caption(crit)
-        _res(f"BL = {BL:.3f} m | H = y + BL = {y + BL:.3f} m")
+            st.latex(rf"BL=\frac{{y}}{{{d}}}=\frac{{{y:.4f}}}{{{d}}}={BL:.4f}\ \mathrm{{m}}")
+        if not isinstance(s, mh.Circular):
+            if not (metodo.startswith("USBR") or metodo.startswith("Máximo")):
+                st.markdown(f"**{f_bl}**")
+            st.caption(crit)
+            _res(f"BL = {BL:.4f} m | H = y + BL = {y + BL:.4f} m")
 
 
 # ---------------- Reporte PDF ----------------
@@ -950,20 +978,23 @@ if modo:
     else: det = [(a_, p_, n_) for a_, (p_, n_) in zip((["Fondo"] if s.b > 0 else []) + (["Paredes"] if modo == 1 else ["Pared izquierda", "Pared derecha"]), partes(y))]
 else: det = []
 H = y + BL
-grupos = [("Resultado principal", [("Tirante crítico yc" if inc == "Tirante crítico (yc)" else "Tirante normal y", f"{y:.3f} m"), ("Caudal Q", f"{Q:.3f} m³/s"), ("Pendiente crítica Sc" if inc == "Tirante crítico (yc)" else "Pendiente S", f"{S:.3f} m/m")] + ([("Ancho de solera b", f"{s.b:.3f} m")] if (modulo == "diseno" and tipo not in ("Triangular", "Circular")) else [("Diámetro D", f"{s.D:.3f} m")] if (modulo == "diseno" and tipo == "Circular") else [])),
-          ("Geometría del flujo", [("Área A", f"{A:.3f} m²"), ("Perímetro mojado P", f"{P:.3f} m"), ("Espejo de agua T", f"{T:.3f} m"), ("Radio hidráulico R", f"{R:.3f} m"), ("Profundidad hidráulica A/T", f"{A / T:.3f} m")]),
-          ("Rugosidad", [("n usada", f"{n:.3f}"), ("Origen", ORIGEN)]),
-          ("Velocidad y régimen", [("Velocidad V", f"{V:.3f} m/s"), ("Número de Froude F", f"{F:.3f}"), ("Régimen", reg), ("Tirante crítico yc", f"{yc:.3f} m")]),
-          *([("Energía específica", [("Energía específica E", f"{E:.3f} m"), ("Energía mínima Emín", f"{Ec:.3f} m"), ("Tirante alterno y₂", y2t)])] if en_on else []),
-          ("Borde libre", [("BL requerido", f"{BL:.3f} m"), ("BL disponible = altura − y", f"{BLd:.3f} m"), ("Altura de la sección", f"{s.altura:.3f} m"), ("Altura mínima necesaria (y + BL)", f"{y + BL:.3f} m")] if FIJA else [("Borde libre BL", f"{BL:.3f} m"), ("Altura total H = y + BL", f"{H:.3f} m"), ("BL como % de y", f"{100 * BL / y:.1f} %")])]
-ctx = dict(titulo=TITULOS[modulo], tipo=tipo, dims=(f", b = {s.b:.3f} m" if s.b > 0 else "") + (f", z = {s.z:.3f}" if s.z > 0 else "") + (f", D = {Dc:.3f} m" if tipo == "Circular" else "") + (f", T = {Tpar:.3f} m, H = {Hpar:.3f} m" if tipo == "Parabólica" else ""), Q=Q, S=S, inc=inc.split(" (")[0].lower(),
+grupos = [("Resultado principal", [("Tirante crítico yc" if inc == "Tirante crítico (yc)" else "Tirante normal y", f"{y:.4f} m"), ("Caudal Q", f"{Q:.4f} m³/s"), ("Pendiente crítica Sc" if inc == "Tirante crítico (yc)" else "Pendiente S", formato_pendiente(S))] + ([("Ancho de solera b", f"{s.b:.4f} m")] if (modulo == "diseno" and tipo not in ("Triangular", "Circular")) else [("Diámetro D", f"{s.D:.4f} m")] if (modulo == "diseno" and tipo == "Circular") else [])),
+          ("Geometría del flujo", [("Área A", f"{A:.4f} m²"), ("Perímetro mojado P", f"{P:.4f} m"), ("Espejo de agua T", f"{T:.4f} m"), ("Radio hidráulico R", f"{R:.4f} m"), ("Profundidad hidráulica A/T", f"{A / T:.4f} m")]),
+          ("Rugosidad", [("n usada", f"{n:.4f}"), ("Origen", ORIGEN)]),
+          ("Velocidad y régimen", [("Velocidad V", f"{V:.4f} m/s"), ("Número de Froude F", f"{F:.4f}"), ("Régimen", reg), ("Tirante crítico yc", f"{yc:.4f} m")]),
+          *([("Energía específica", [("Energía específica E", f"{E:.4f} m"), ("Energía mínima Emín", f"{Ec:.4f} m"), ("Tirante alterno y₂", y2t)])] if en_on else []),
+          ("Borde libre", [("Diámetro interior D", f"{s.D:.4f} m"), ("Tirante y", f"{y:.4f} m"), ("Borde libre geométrico D − y", f"{BL:.4f} m")] if isinstance(s, mh.Circular) else [("BL requerido", f"{BL:.4f} m"), ("BL disponible = altura − y", f"{BLd:.4f} m"), ("Altura de la sección", f"{s.altura:.4f} m"), ("Altura mínima necesaria (y + BL)", f"{y + BL:.4f} m")] if FIJA else [("Borde libre BL", f"{BL:.4f} m"), ("Altura total H = y + BL", f"{H:.4f} m"), ("BL como % de y", f"{100 * BL / y:.1f} %")])]
+ctx = dict(titulo=TITULOS[modulo], tipo=tipo, dims=(f", b = {s.b:.4f} m" if s.b > 0 else "") + (f", z = {s.z:.4f}" if s.z > 0 else "") + (f", D = {Dc:.4f} m" if tipo == "Circular" else "") + (f", T = {Tpar:.4f} m, H = {Hpar:.4f} m" if tipo == "Parabólica" else ""), Q=Q, S=S, inc=inc.split(" (")[0].lower(),
            horton=det, n_base=n_base(y), cowan=(n_base(y), k1, k2, k3, k4, k5) if cow_on else None, material=mats[0] if mats else "", n=n,
            origen=ORIGEN, metodo=metodo_sol, C=Cc_, iter=len(it) if it else 0,
            y=y, A=A, P=P, T=T, R=R, V=V, F=F, reg=reg, msg_reg=msg_reg, E=E, Ec=Ec, y2=y2, y2t=y2t, yc=yc, vmin=vmin, vmax=vmax, msg_v=msg_v, bl_formula=f_bl, crit=crit, BL=BL, H=H,
            altura=(s.altura if FIJA else None), aviso=mh.validar_pendiente(S), sub=(mh.detalle_subareas(s, y, S, metodo_sol, p_met) if SUBAREAS else None), proyecto=proyecto, energia=en_on, metodo_bl=metodo, comp_bl=comp, grupos=grupos, dibujo=datos_dibujo(s, y, H),
+           dims_diametro=(s.D if isinstance(s, mh.Circular) else None),
+           curva_energia=(lambda ymax_curve: ([(mh.energia(s, Q, max(1e-5, yy)), max(1e-5, yy)) for yy in [ymax_curve * i / 250 for i in range(1, 251)]], [(E, y, "y"), (Ec, yc, "yc")] + ([(mh.energia(s, Q, y2), y2, "y₂")] if y2 is not None else [])))(min(max(3*yc, 1.5*y, 1.2*(y2 or 0), 0.1), getattr(s, "ymax", float("inf"))*0.999)),
            diseno=(dict(circ=True, D=s.D, y=y) if (modulo == "diseno" and tipo == "Circular") else dict(crit=crit_d, f=mh.FACTORES[crit_d], m=m_d, y=y_d, b=s.b) if (modulo == "diseno" and tipo != "Triangular") else None))
 with pdf_slot:
     st.download_button("📄 Descargar reporte en PDF", data=reporte_pdf.generar(ctx), file_name="reporte_lycanal_pro.pdf", mime="application/pdf")
+
 
 
 
