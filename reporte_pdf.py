@@ -69,34 +69,169 @@ def dibujo(c, w=440, h=230):
     return D
 
 
+
 def grafica_energia(c, w=440, h=225):
-    """Curva E-y compacta para incluir en el informe PDF."""
+    """Grafica E-y para el PDF, con escalas coherentes con Streamlit."""
     datos = c.get("curva_energia")
     if not datos or not datos[0]:
         return None
+
     curva, puntos = datos
-    xs = [p[0] for p in curva]; ys = [p[1] for p in curva]
-    xmax = max(xs + [p[0] for p in puntos]) * 1.08
-    ymax = max(ys + [p[1] for p in puntos]) * 1.08
-    pad_l, pad_r, pad_b, pad_t = 42, 12, 28, 18
-    x0, x1, y0, y1 = pad_l, w-pad_r, pad_b, h-pad_t
-    tx = lambda x: x0 + (x / (xmax or 1)) * (x1-x0)
-    ty = lambda y: y0 + (y / (ymax or 1)) * (y1-y0)
-    D = Drawing(w, h); D.hAlign = "CENTER"
+
+    # Usar los mismos límites principales que la gráfica de Streamlit.
+    Ec = max(float(c.get("Ec", 0.0)), 1e-9)
+    xmax = 3.0 * Ec
+    ymax = max(
+        [float(p[1]) for p in curva]
+        + [float(p[1]) for p in puntos if p[1] is not None]
+        + [1e-9]
+    )
+
+    pad_l, pad_r, pad_b, pad_t = 43, 12, 31, 25
+    x0, x1 = pad_l, w - pad_r
+    y0, y1 = pad_b, h - pad_t
+
+    tx = lambda x: x0 + (x / xmax) * (x1 - x0)
+    ty = lambda y: y0 + (y / ymax) * (y1 - y0)
+
+    D = Drawing(w, h)
+    D.hAlign = "CENTER"
+
+    # Fondo de la zona de trazado.
+    D.add(Polygon(
+        [x0, y0, x1, y0, x1, y1, x0, y1],
+        fillColor=colors.HexColor("#faf8f3"),
+        strokeColor=None
+    ))
+
+    # Cuadrícula y numeración de los ejes.
+    for i in range(6):
+        xv = xmax * i / 5
+        xp = tx(xv)
+        D.add(Line(
+            xp, y0, xp, y1,
+            strokeColor=colors.HexColor("#e8e5dc"),
+            strokeWidth=0.5
+        ))
+        D.add(String(
+            xp, y0 - 11, f"{xv:.2f}",
+            textAnchor="middle",
+            fontName=F_REG, fontSize=7,
+            fillColor=MAR
+        ))
+
+        yv = ymax * i / 5
+        yp = ty(yv)
+        D.add(Line(
+            x0, yp, x1, yp,
+            strokeColor=colors.HexColor("#e8e5dc"),
+            strokeWidth=0.5
+        ))
+        D.add(String(
+            x0 - 5, yp - 2.5, f"{yv:.2f}",
+            textAnchor="end",
+            fontName=F_REG, fontSize=7,
+            fillColor=MAR
+        ))
+
+    # Ejes.
     D.add(Line(x0, y0, x1, y0, strokeColor=MAR, strokeWidth=1))
     D.add(Line(x0, y0, x0, y1, strokeColor=MAR, strokeWidth=1))
-    # E = y diagonal
-    D.add(PolyLine([tx(0), ty(0), tx(min(xmax, ymax)), ty(min(xmax, ymax))], strokeColor=ORO, strokeWidth=1, strokeDashArray=[4, 3]))
-    D.add(PolyLine([v for e, yy in curva for v in (tx(e), ty(yy))], strokeColor=MAR, strokeWidth=2))
-    for ex, yy, label in puntos:
-        if ex is None or yy is None: continue
-        col = TUR if label == "yc" else ORO if label == "y" else colors.HexColor("#a3203f")
-        D.add(String(tx(ex)+4, ty(yy)+3, f"{label}: ({ex:.3f}, {yy:.3f}) m", fontName=F_BOLD, fontSize=7.5, fillColor=col))
-        D.add(Line(tx(ex)-2, ty(yy), tx(ex)+2, ty(yy), strokeColor=col, strokeWidth=2))
-    D.add(String((x0+x1)/2, 7, "Energía específica E (m)", textAnchor="middle", fontName=F_REG, fontSize=8, fillColor=MAR))
-    D.add(String(4, (y0+y1)/2, "y (m)", fontName=F_REG, fontSize=8, fillColor=MAR))
-    D.add(String(x0+3, y1+2, "Curva de energía específica E–y", fontName=F_BOLD, fontSize=9, fillColor=MAR))
+
+    # Recta E = y, recortada a los límites visibles.
+    fin = min(xmax, ymax)
+    D.add(PolyLine(
+        [tx(0), ty(0), tx(fin), ty(fin)],
+        strokeColor=ORO,
+        strokeWidth=1.5,
+        strokeDashArray=[5, 4]
+    ))
+
+    # Curva E(y): excluir los valores fuera del área visible.
+    visibles = [
+        (float(e), float(yy))
+        for e, yy in curva
+        if 0 <= float(e) <= xmax and 0 <= float(yy) <= ymax
+    ]
+
+    if len(visibles) >= 2:
+        coords = [
+            coord
+            for e, yy in visibles
+            for coord in (tx(e), ty(yy))
+        ]
+        D.add(PolyLine(
+            coords,
+            strokeColor=MAR,
+            strokeWidth=2.2
+        ))
+
+    # Puntos críticos y tirantes, con etiquetas similares a Streamlit.
+    colores = {
+        "y": ORO,
+        "y1": MAR,
+        "yc": TUR,
+        "y₂": colors.HexColor("#a3203f"),
+        "y2": colors.HexColor("#a3203f")
+    }
+    etiquetas = {"y": "y₁", "y1": "y₁", "yc": "yc",
+                 "y₂": "y₂", "y2": "y₂"}
+
+    for ex, yy, nombre in puntos:
+        if ex is None or yy is None:
+            continue
+
+        ex, yy = float(ex), float(yy)
+        if not (0 <= ex <= xmax and 0 <= yy <= ymax):
+            continue
+
+        color = colores.get(nombre, MAR)
+        px, py = tx(ex), ty(yy)
+
+        # Marcador visible.
+        D.add(Line(
+            px - 3, py, px + 3, py,
+            strokeColor=color, strokeWidth=2.5
+        ))
+        D.add(Line(
+            px, py - 3, px, py + 3,
+            strokeColor=color, strokeWidth=2.5
+        ))
+
+        nombre_visible = etiquetas.get(nombre, nombre)
+        D.add(String(
+            min(px + 6, x1 - 75),
+            py + 4,
+            f"{nombre_visible} = {yy:.4f} m",
+            fontName=F_BOLD,
+            fontSize=7.2,
+            fillColor=color
+        ))
+
+    # Título y nombres de los ejes.
+    D.add(String(
+        (x0 + x1) / 2, h - 11,
+        "Curva de energía específica E-y",
+        textAnchor="middle",
+        fontName=F_BOLD, fontSize=9,
+        fillColor=MAR
+    ))
+    D.add(String(
+        (x0 + x1) / 2, 5,
+        "Energía específica E (m)",
+        textAnchor="middle",
+        fontName=F_REG, fontSize=8,
+        fillColor=MAR
+    ))
+    D.add(String(
+        5, (y0 + y1) / 2,
+        "y (m)",
+        fontName=F_REG, fontSize=8,
+        fillColor=MAR
+    ))
+
     return D
+
 
 
 def pasos(c):
